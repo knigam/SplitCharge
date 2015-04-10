@@ -12,7 +12,7 @@ import java.util.ArrayList;
  * Created by kushal on 4/7/15.
  */
 public class MyAdapter  extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
-    protected ArrayList<PriceItem> data;
+    protected ArrayList<DataItem> data;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
@@ -25,7 +25,7 @@ public class MyAdapter  extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
         }
     }
 
-    public MyAdapter(ArrayList<PriceItem> myDataset) {
+    public MyAdapter(ArrayList<DataItem> myDataset) {
         data = myDataset;
     }
 
@@ -39,10 +39,10 @@ public class MyAdapter  extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(ViewHolder viewHolder, int i) {
         viewHolder.textView.setText(data.get(i).getName());
-        viewHolder.priceView.setText("$" + String.format( "%.2f", data.get(i).getPrice()));
+        viewHolder.priceView.setText("$" + String.format( "%.2f", data.get(i).getCost()));
     }
 
-    public void refresh(ArrayList<PriceItem> data) {
+    public void refresh(ArrayList<DataItem> data) {
         this.data = data;
         notifyDataSetChanged();
     }

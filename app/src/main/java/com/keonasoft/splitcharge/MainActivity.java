@@ -2,20 +2,21 @@ package com.keonasoft.splitcharge;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
-import android.widget.TextView;
 
 import com.getbase.floatingactionbutton.FloatingActionButton;
+import com.keonasoft.splitcharge.helpers.DatabaseOpenHelper;
 
 import java.util.ArrayList;
 
@@ -25,16 +26,18 @@ public class MainActivity extends Activity {
     private RecyclerView mRecyclerView;
     private PersonAdapter personAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-    private ArrayList<PriceItem> mDataset;
+    private ArrayList<DataItem> mDataset;
     private FloatingActionButton addPersonBtn;
+    private DatabaseOpenHelper dbHelper;
+    private int chargeId = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mDataset = new ArrayList<PriceItem>();
-        mDataset.add(new PriceItem(0, "Me", 0.00));
-        mDataset.add(new PriceItem(1, "Name 2", 2.50));
+        dbHelper = new DatabaseOpenHelper(getApplicationContext());
+        mDataset = new ArrayList<DataItem>();
+        populateDataSet();
         mRecyclerView = (RecyclerView) findViewById(R.id.chargesList);
         mRecyclerView.setHasFixedSize(true);
         mLayoutManager = new LinearLayoutManager(this);
@@ -46,8 +49,12 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //TODO: add item to database and take user to person edit screen
-                mDataset.add(new PriceItem(0, "New User", 0.0));
-                personAdapter.refresh(mDataset);
+                Intent intent = new Intent(MainActivity.this, PersonActivity.class);
+                intent.putExtra("index", -1); // Let negative one represent that we need to make a new entry
+                intent.putExtra("newIndex", mDataset.size());
+                intent.putExtra("chargeId", chargeId);
+                startActivity(intent);
+
             }
         });
         mRecyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -99,8 +106,32 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void populateDataSet(){
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        Cursor c = db.query(
+                DatabaseOpenHelper.PERSON_TABLE_NAME,
+                new String[]{DatabaseOpenHelper.PERSON_ID_COL, DatabaseOpenHelper.PERSON_USERNAME_COL, DatabaseOpenHelper.ITEM_COST_COL, DatabaseOpenHelper.PERSON_COMPLETED_COL},
+                DatabaseOpenHelper.PERSON_CHARGEID_COL + " = ?",
+                new String[]{chargeId+""},
+                null,
+                null,
+                DatabaseOpenHelper.PERSON_ID_COL + " ASC"
+        );
+        c.moveToFirst();
+        while(!c.isAfterLast()){
+            int id = c.getInt(c.getColumnIndexOrThrow(DatabaseOpenHelper.PERSON_ID_COL));
+            String name = c.getString(c.getColumnIndexOrThrow(DatabaseOpenHelper.PERSON_USERNAME_COL));
+            int cost = c.getInt(c.getColumnIndexOrThrow(DatabaseOpenHelper.PERSON_COST_COL));
+            boolean completed = c.getInt(c.getColumnIndexOrThrow(DatabaseOpenHelper.PERSON_COMPLETED_COL)) != 0;
+
+            mDataset.add(new DataItem(id, name, cost, completed));
+            c.moveToNext();
+        }
+    }
+
     private class PersonAdapter extends MyAdapter {
-        public PersonAdapter(ArrayList<PriceItem> data) {
+        public PersonAdapter(ArrayList<DataItem> data) {
             super(data);
         }
 
@@ -112,6 +143,7 @@ public class MainActivity extends Activity {
                 public void onClick(View v) {
                     Intent intent = new Intent(MainActivity.this, PersonActivity.class);
                     intent.putExtra("index", mRecyclerView.getChildPosition(v));
+                    intent.putExtra("chargeId", chargeId);
                     startActivity(intent);
                 }
             });
